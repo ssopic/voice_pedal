@@ -14,6 +14,9 @@ import uuid
 import pedalboard
 
 # --- CONFIGURATION & DATA ---
+# COMPREHENSIVE PEDALBOARD EDUCATIONAL HINTS WITH CONSTRAINTS AND DEFAULTS
+# This dictionary maps built-in Pedalboard effects to beginner-friendly explanations, safe ranges, and default values.
+
 FEATURES = {
     "Bitcrush": {
         "_info": "Imagine a high-definition photo being turned into a pixelated mosaic. Bitcrushing reduces the 'detail' of the audio wave, creating a crunchy, robotic, or 'retro-gaming' sound.",
@@ -21,6 +24,55 @@ FEATURES = {
         "bit_depth_min": 1.0,
         "bit_depth_max": 24.0,
         "bit_depth_default": 8
+    },
+    "Chorus": {
+        "_info": "This makes one instrument sound like a group. It slightly detunes and delays a copy of your sound to create thickness and shimmer.",
+        "rate_hz": "How fast the sound 'wobbles'. Low values create a slow wave; high values create a fast, dizzying shimmer.",
+        "rate_hz_min": 0.01,
+        "rate_hz_max": 100.0,
+        "rate_hz_default": 1.0,
+        "depth": "How 'out of tune' the voices get. High values make the effect very obvious and 'underwater' sounding.",
+        "depth_min": 0.0,
+        "depth_max": 1.0,
+        "depth_default": 0.25,
+        "centre_delay_ms": "The base delay between the voices. Small changes here affect how 'thick' the group sounds.",
+        "centre_delay_ms_min": 1.0,
+        "centre_delay_ms_max": 100.0,
+        "centre_delay_ms_default": 7.0,
+        "feedback": "Feeds the sound back into itself. This can add a metallic edge to the chorus.",
+        "feedback_min": 0.0,
+        "feedback_max": 0.95,
+        "feedback_default": 0.0,
+        "mix": "0 is just the original sound; 1.0 is full chorus. 0.5 is the 'sweet spot' for most users.",
+        "mix_min": 0.0,
+        "mix_max": 1.0,
+        "mix_default": 0.5
+    },
+    "Clipping": {
+        "_info": "This mimics what happens when you push a speaker too hard. It 'chops off' the tops of the sound waves, creating a harsh, aggressive distortion.",
+        "threshold_db": "The level where the chopping starts. Lowering this value makes the sound more distorted.",
+        "threshold_db_min": -60.0,
+        "threshold_db_max": 0.0,
+        "threshold_db_default": -6.0
+    },
+    "Compressor": {
+        "_info": "The 'Auto-Volume' effect. It makes quiet sounds louder and loud sounds quieter, resulting in a consistent, professional-level energy.",
+        "threshold_db": "The volume level where the compressor starts working.",
+        "threshold_db_min": -60.0,
+        "threshold_db_max": 0.0,
+        "threshold_db_default": 0,
+        "ratio": "How much the volume is turned down. 1:1 does nothing; 10:1 'squashes' the sound significantly.",
+        "ratio_min": 1.0,
+        "ratio_max": 50.0,
+        "ratio_default": 1,
+        "attack_ms": "How fast the compressor reacts. A slow attack lets the initial 'thump' through.",
+        "attack_ms_min": 0.1,
+        "attack_ms_max": 500.0,
+        "attack_ms_default": 1.0,
+        "release_ms": "How long it takes for the volume to return to normal after the sound drops.",
+        "release_ms_min": 1.0,
+        "release_ms_max": 3000.0,
+        "release_ms_default": 100
     },
     "Convolution": {
         "_info": "Uses a 'fingerprint' of a real space (like a church) and applies it to your audio. Requires an Impulse Response (IR) file.",
@@ -32,6 +84,221 @@ FEATURES = {
         "sample_rate_min": 8000.0,
         "sample_rate_max": 192000.0,
         "sample_rate_default": None
+    },
+    "Delay": {
+        "_info": "A classic echo. It repeats your sound after a set amount of time.",
+        "delay_seconds": "The time between the original sound and the echo.",
+        "delay_seconds_min": 0.01,
+        "delay_seconds_max": 20.0,
+        "delay_seconds_default": 0.5,
+        "feedback": "How many echoes you hear. 0 is one echo; 0.9 is a long trail.",
+        "feedback_min": 0.0,
+        "feedback_max": 1.0,
+        "feedback_default": 0.0,
+        "mix": "How loud the echoes are compared to the original sound.",
+        "mix_min": 0.0,
+        "mix_max": 1.0,
+        "mix_default": 0.5
+    },
+    "Distortion": {
+        "_info": "Adds heat and grit, like an overdriven guitar amp.",
+        "drive_db": "The 'heat'. Turn this up for more fuzz and grit.",
+        "drive_db_min": 0.0,
+        "drive_db_max": 50.0,
+        "drive_db_default": 25
+    },
+    "Gain": {
+        "_info": "A simple volume knob inside the digital signal path.",
+        "gain_db": "Positive values make it louder; negative values make it quieter.",
+        "gain_db_min": -60.0,
+        "gain_db_max": 24.0,
+        "gain_db_default": 1.0
+    },
+    "GSMFullRateCompressor": {
+        "_info": "Mimics the sound of an old 2G cell phone call. It adds a specific type of digital 'lo-fi' crunch.",
+        "quality": "Technical setting for the resampling quality.",
+        "quality_min": 0,
+        "quality_max": 10,
+        "quality_default": 10  # Derived from "<Quality.WindowedSinc8: 10>"
+    },
+    "HighShelfFilter": {
+        "_info": "The 'Treble' knob. It boosts or cuts all high-frequency sounds.",
+        "cutoff_frequency_hz": "Where the treble range starts.",
+        "cutoff_frequency_hz_min": 20.0,
+        "cutoff_frequency_hz_max": 20000.0,
+        "cutoff_frequency_hz_default": 440,
+        "gain_db": "The amount of boost or cut.",
+        "gain_db_min": -24.0,
+        "gain_db_max": 24.0,
+        "gain_db_default": 0.0,
+        "q": "The sharpness of the curve.",
+        "q_min": 0.1,
+        "q_max": 10.0,
+        "q_default": 0.7071067690849304
+    },
+    "HighpassFilter": {
+        "_info": "Cuts out the 'bass mud' and let high sounds pass through.",
+        "cutoff_frequency_hz": "Everything below this number is removed.",
+        "cutoff_frequency_hz_min": 20.0,
+        "cutoff_frequency_hz_max": 20000.0,
+        "cutoff_frequency_hz_default": 50
+    },
+    "LadderFilter": {
+        "_info": "A classic synth filter with a warm, vintage character.",
+        "cutoff_hz": "The point where the filter acts. Moving this creates 'wah' sounds.",
+        "cutoff_hz_min": 20.0,
+        "cutoff_hz_max": 20000.0,
+        "cutoff_hz_default": 200,
+        "resonance": "Adds a whistle or peak at the cutoff frequency.",
+        "resonance_min": 0.0,
+        "resonance_max": 1.0,
+        "resonance_default": 0,
+        "drive": "Internal saturation for a beefier sound.",
+        "drive_min": 1.0,
+        "drive_max": 10.0,
+        "drive_default": 1.0
+    },
+    "Limiter": {
+        "_info": "A hard ceiling that prevents audio from ever getting too loud (clipping).",
+        "threshold_db": "The maximum volume allowed.",
+        "threshold_db_min": -60.0,
+        "threshold_db_max": 0.0,
+        "threshold_db_default": -10.0,
+        "release_ms": "How fast the limiter resets after a peak.",
+        "release_ms_min": 1.0,
+        "release_ms_max": 1000.0,
+        "release_ms_default": 100.0
+    },
+    "LowShelfFilter": {
+        "_info": "The 'Bass' knob. Boosts or cuts the low frequencies.",
+        "cutoff_frequency_hz": "Where the bass range ends.",
+        "cutoff_frequency_hz_min": 20.0,
+        "cutoff_frequency_hz_max": 20000.0,
+        "cutoff_frequency_hz_default": 440,
+        "gain_db": "The amount of bass boost or cut.",
+        "gain_db_min": -24.0,
+        "gain_db_max": 24.0,
+        "gain_db_default": 0.0,
+        "q": "The sharpness of the curve.",
+        "q_min": 0.1,
+        "q_max": 10.0,
+        "q_default": 0.7071067690849304
+    },
+    "LowpassFilter": {
+        "_info": "The 'Muffler'. Cuts out high frequencies to make things sound dark or distant.",
+        "cutoff_frequency_hz": "Everything above this number is removed.",
+        "cutoff_frequency_hz_min": 20.0,
+        "cutoff_frequency_hz_max": 20000.0,
+        "cutoff_frequency_hz_default": 50
+    },
+    "MP3Compressor": {
+        "_info": "Simulates the sound of a low-quality MP3 file, adding 'watery' artifacts.",
+        "vbr_quality": "Lower is better quality; higher is more compressed/broken sounding.",
+        "vbr_quality_min": 0.0,
+        "vbr_quality_max": 9.0,
+        "vbr_quality_default": 2.0
+    },
+    "NoiseGate": {
+        "_info": "Cuts off sound when it gets too quiet, removing background noise.",
+        "threshold_db": "The level where the gate closes.",
+        "threshold_db_min": -100.0,
+        "threshold_db_max": 0.0,
+        "threshold_db_default": -100.0,
+        "ratio": "How hard the audio is cut when the gate is closed.",
+        "ratio_min": 1.0,
+        "ratio_max": 50.0,
+        "ratio_default": 10,
+        "attack_ms": "How fast the gate opens.",
+        "attack_ms_min": 0.1,
+        "attack_ms_max": 500.0,
+        "attack_ms_default": 1.0,
+        "release_ms": "How fast the gate closes.",
+        "release_ms_min": 1.0,
+        "release_ms_max": 3000.0,
+        "release_ms_default": 100.0
+    },
+    "PeakFilter": {
+        "_info": "A surgical tool to boost or cut a specific frequency note.",
+        "cutoff_frequency_hz": "The exact frequency note you are targeting.",
+        "cutoff_frequency_hz_min": 20.0,
+        "cutoff_frequency_hz_max": 20000.0,
+        "cutoff_frequency_hz_default": 440,
+        "gain_db": "The boost or cut at that specific spot.",
+        "gain_db_min": -24.0,
+        "gain_db_max": 24.0,
+        "gain_db_default": 0.0,
+        "q": "How narrow the focus is. High Q is a tiny needle; low Q is a wide brush.",
+        "q_min": 0.1,
+        "q_max": 20.0,
+        "q_default": 0.7071067690849304
+    },
+    "Phaser": {
+        "_info": "A swirling 'whoosh' effect caused by moving phase cancellations.",
+        "rate_hz": "Speed of the swirling.",
+        "rate_hz_min": 0.01,
+        "rate_hz_max": 20.0,
+        "rate_hz_default": 1.0,
+        "depth": "Width of the swirl.",
+        "depth_min": 0.0,
+        "depth_max": 1.0,
+        "depth_default": 0.5,
+        "centre_frequency_hz": "The middle frequency of the swirl.",
+        "centre_frequency_hz_min": 100.0,
+        "centre_frequency_hz_max": 10000.0,
+        "centre_frequency_hz_default": 1300.0,
+        "feedback": "Adds a metallic resonance to the swirl.",
+        "feedback_min": 0.0,
+        "feedback_max": 0.99,
+        "feedback_default": 0.0,
+        "mix": "Dry/Wet balance.",
+        "mix_min": 0.0,
+        "mix_max": 1.0,
+        "mix_default": 0.5
+    },
+    "PitchShift": {
+        "_info": "Changes the musical pitch without changing the speed of the audio.",
+        "semitones": "Steps in pitch. +12 is one octave up; -12 is one octave down.",
+        "semitones_min": -24.0,
+        "semitones_max": 24.0,
+        "semitones_default": 0.0
+    },
+    "Resample": {
+        "_info": "Changes the sample rate of the audio, often used for lo-fi effects.",
+        "target_sample_rate": "The new frequency speed.",
+        "target_sample_rate_min": 2000.0,
+        "target_sample_rate_max": 192000.0,
+        "target_sample_rate_default": 8000.0,
+        "quality": "The mathematical precision of the resample.",
+        "quality_min": 0,
+        "quality_max": 10,
+        "quality_default": 8  # Derived from "<Quality.WindowedSinc32: 8>"
+    },
+    "Reverb": {
+        "_info": "Adds the sound of a physical room or space.",
+        "room_size": "Size of the space (Closet vs Cathedral).",
+        "room_size_min": 0.0,
+        "room_size_max": 1.0,
+        "room_size_default": 0.5,
+        "damping": "How much high-frequency sound the walls absorb.",
+        "damping_min": 0.0,
+        "damping_max": 1.0,
+        "damping_default": 0.5,
+        "wet_level": "Volume of the echo part.",
+        "wet_level_min": 0.0,
+        "wet_level_max": 1.0,
+        "wet_level_default": 0.33,
+        "dry_level": "Volume of the clean part.",
+        "dry_level_min": 0.0,
+        "dry_level_max": 1.0,
+        "dry_level_default": 0.4,
+        "width": "Stereo width of the room.",
+        "width_min": 0.0,
+        "width_max": 1.0,
+        "width_default": 1.0,
+        "freeze_mode": "Holds the echo forever if set to 1.",
+        "freeze_mode_min": 0.0,
+        "freeze_mode_max": 1.0,
+        "freeze_mode_default": 0.0
     }
 }
 
