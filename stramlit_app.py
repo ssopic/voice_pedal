@@ -404,16 +404,17 @@ def load_presets():
     """Downloads a batch of preset files from GitHub."""
     # ADD URL HERE: Replace these with your actual GitHub raw URLs
     preset_urls = [
-        'https://github.com/ssopic/voice_pedal/blob/main/bark_generated_voices/v2_en_speaker_0.wav', 
-        'https://github.com/ssopic/voice_pedal/blob/main/bark_generated_voices/v2_en_speaker_1.wav', 
-        'https://github.com/ssopic/voice_pedal/blob/main/bark_generated_voices/v2_en_speaker_2.wav',
-        'https://github.com/ssopic/voice_pedal/blob/main/bark_generated_voices/v2_en_speaker_3.wav', 
-        'https://github.com/ssopic/voice_pedal/blob/main/bark_generated_voices/v2_en_speaker_4.wav', 
-        'https://github.com/ssopic/voice_pedal/blob/main/bark_generated_voices/v2_en_speaker_5.wav', 
-        'https://github.com/ssopic/voice_pedal/blob/main/bark_generated_voices/v2_en_speaker_6.wav', 
-        'https://github.com/ssopic/voice_pedal/blob/main/bark_generated_voices/v2_en_speaker_7.wav', 
-        'https://github.com/ssopic/voice_pedal/blob/main/bark_generated_voices/v2_en_speaker_8.wav', 
-        'https://github.com/ssopic/voice_pedal/blob/main/bark_generated_voices/v2_en_speaker_9.wav']
+        'https://raw.githubusercontent.com/ssopic/voice_pedal/main/bark_generated_voices/v2_en_speaker_0.wav', 
+        'https://raw.githubusercontent.com/ssopic/voice_pedal/main/bark_generated_voices/v2_en_speaker_1.wav', 
+        'https://raw.githubusercontent.com/ssopic/voice_pedal/main/bark_generated_voices/v2_en_speaker_2.wav',
+        'https://raw.githubusercontent.com/ssopic/voice_pedal/main/bark_generated_voices/v2_en_speaker_3.wav', 
+        'https://raw.githubusercontent.com/ssopic/voice_pedal/main/bark_generated_voices/v2_en_speaker_4.wav', 
+        'https://raw.githubusercontent.com/ssopic/voice_pedal/main/bark_generated_voices/v2_en_speaker_5.wav', 
+        'https://raw.githubusercontent.com/ssopic/voice_pedal/main/bark_generated_voices/v2_en_speaker_6.wav', 
+        'https://raw.githubusercontent.com/ssopic/voice_pedal/main/bark_generated_voices/v2_en_speaker_7.wav', 
+        'https://raw.githubusercontent.com/ssopic/voice_pedal/main/bark_generated_voices/v2_en_speaker_8.wav', 
+        'https://raw.githubusercontent.com/ssopic/voice_pedal/main/bark_generated_voices/v2_en_speaker_9.wav'
+    ]
     for idx, url in enumerate(preset_urls):
         add_new_track(f"Preset Voice {idx+1}", url)
 
