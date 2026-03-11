@@ -12,7 +12,7 @@ import io
 import requests
 import uuid
 import pedalboard
-
+import plotly.graph_objects as go
 # --- CONFIGURATION & DATA ---
 # COMPREHENSIVE PEDALBOARD EDUCATIONAL HINTS WITH CONSTRAINTS AND DEFAULTS
 # This dictionary maps built-in Pedalboard effects to beginner-friendly explanations, safe ranges, and default values.
