@@ -343,10 +343,84 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# newly added functions
 
-# --- STATE INITIALIZATION ---
-if "tracks" not in st.session_state:
-    st.session_state.tracks = {}
+def process_uploaded_file(uploaded_file):
+    """Reads a Streamlit uploaded .wav file and converts it to float32."""
+    if uploaded_file is not None:
+        try:
+            audio_bytes = io.BytesIO(uploaded_file.read())
+            sample_rate, data = scipy_wav.read(audio_bytes)
+            
+            if data.ndim == 2:
+                data = data.T
+            if data.dtype != np.float32:
+                if data.dtype == np.int16:
+                    data = (data / 32768.0).astype(np.float32)
+                elif data.dtype == np.int32:
+                    data = (data / 2147483648.0).astype(np.float32)
+                elif data.dtype == np.uint8:
+                    data = ((data - 128) / 128.0).astype(np.float32)
+                else:
+                    data = data.astype(np.float32)
+                    
+            track_id = str(uuid.uuid4())
+            st.session_state.tracks[track_id] = {
+                "name": uploaded_file.name,
+                "raw_audio": data,
+                "sample_rate": sample_rate,
+                "chain": []
+            }
+        except Exception as e:
+            st.error(f"Failed to load uploaded file: {e}")
+
+def generate_waveform_plot(audio_array, sample_rate):
+    """Downsamples audio for rapid rendering and returns a Plotly figure."""
+    target_points = 2000
+    num_samples = len(audio_array) if audio_array.ndim == 1 else len(audio_array[0])
+    downsample_factor = max(1, num_samples // target_points)
+    
+    # Simple decimation (taking every Nth sample)
+    if audio_array.ndim == 2:
+        # Use first channel for waveform visual
+        downsampled_audio = audio_array[0][::downsample_factor]
+    else:
+        downsampled_audio = audio_array[::downsample_factor]
+    
+    time_axis = np.linspace(0, num_samples / sample_rate, len(downsampled_audio))
+    
+    fig = go.Figure(data=go.Scatter(x=time_axis, y=downsampled_audio, mode='lines', line=dict(color='#ff4b4b')))
+    fig.update_layout(
+        margin=dict(l=0, r=0, t=10, b=10),
+        height=150,
+        xaxis_title="Time (seconds)",
+        yaxis_title="Amplitude",
+        showlegend=False,
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)'
+    )
+    return fig
+
+def extract_to_new_track(source_track_name, audio_array, sample_rate, start_sec, end_sec):
+    """Slices the numpy array and registers it as a brand new track."""
+    start_idx = int(start_sec * sample_rate)
+    end_idx = int(end_sec * sample_rate)
+    
+    if audio_array.ndim == 2:
+        sliced_audio = audio_array[:, start_idx:end_idx]
+    else:
+        sliced_audio = audio_array[start_idx:end_idx]
+    
+    track_id = str(uuid.uuid4())
+    new_name = f"{source_track_name} (Cut {start_sec:.2f}s-{end_sec:.2f}s)"
+    
+    st.session_state.tracks[track_id] = {
+        "name": new_name,
+        "raw_audio": sliced_audio,
+        "sample_rate": sample_rate,
+        "chain": []
+    }
+
 
 # --- CORE AUDIO FUNCTIONS ---
 def fetch_and_decode_audio(url):
@@ -450,129 +524,145 @@ def move_effect(track_id, idx, direction):
         chain[idx], chain[new_idx] = chain[new_idx], chain[idx]
 
 
-# --- UI: TOP CONTROLS ---
-st.set_page_config(layout="wide", page_title="Multi-Track Audio Lab")
-st.title("🎛️ Multi-Track Audio Lab")
-st.caption("Load tracks, build independent effect chains, and audition them step-by-step.")
-
-top_col1, top_col2 = st.columns([3, 1])
-with top_col1:
-    col_a, col_b = st.columns([3, 1])
-    with col_a:
+def render_top_controls():
+    st.title("🎛️ Multi-Track Audio Lab")
+    st.caption("Upload files, cut segments, and build independent effect chains.")
+    
+    top_col1, top_col2, top_col3 = st.columns([2, 2, 1])
+    
+    with top_col1:
+        uploaded_file = st.file_uploader("Upload .WAV File", type=["wav"])
+        if uploaded_file is not None:
+            # Check if this file was already processed to avoid infinite reloads
+            if "last_uploaded" not in st.session_state or st.session_state.last_uploaded != uploaded_file.name:
+                process_uploaded_file(uploaded_file)
+                st.session_state.last_uploaded = uploaded_file.name
+                st.rerun()
+                
+    with top_col2:
         custom_url = st.text_input("Load Custom WAV URL", placeholder="https://example.com/audio.wav")
-    with col_b:
-        st.write("") # Spacer
         if st.button("Download & Add Track", use_container_width=True):
             if custom_url:
                 add_new_track(f"Custom Track {len(st.session_state.tracks) + 1}", custom_url)
-with top_col2:
-    st.write("") # Spacer
-    if st.button("📥 Load Preset Voices", type="primary", use_container_width=True):
-        load_presets()
-
-st.divider()
-
-# --- UI: HORIZONTAL TRACK LAYOUT ---
-if not st.session_state.tracks:
-    st.info("No audio tracks loaded. Use the controls above to fetch some WAV files!")
-else:
-    # Streamlit natively puts these in a flex container. Our CSS above forces them to scroll horizontally!
-    cols = st.columns(len(st.session_state.tracks))
-    
-    for col, (track_id, track) in zip(cols, st.session_state.tracks.items()):
-        with col:
-            # TRACK HEADER
-            head_c1, head_c2 = st.columns([3, 1])
-            head_c1.subheader(track["name"])
-            if head_c2.button("✖ Remove", key=f"del_track_{track_id}"):
-                del st.session_state.tracks[track_id]
                 st.rerun()
                 
-            # REPLACE AUDIO
-            replace_url = st.text_input("Replace Voice URL", key=f"rep_{track_id}", placeholder="New WAV URL...")
-            if replace_url:
-                if st.button("Replace (Keep Effects)", key=f"rep_btn_{track_id}"):
-                    replace_track_audio(track_id, replace_url)
-                    st.rerun()
+    with top_col3:
+        st.write("") # Spacer
+        if st.button("📥 Load Presets", type="primary", use_container_width=True):
+            load_presets()
+            st.rerun()
 
-            st.write("**Original Raw Audio:**")
-            st.audio(create_playback_buffer(track["raw_audio"], track["sample_rate"]), format="audio/wav")
-            
-            # EFFECT ADDER
-            st.write("---")
-            add_col1, add_col2 = st.columns([2, 1])
-            selected_eff = add_col1.selectbox("Choose Effect", options=FEATURES.keys(), key=f"sel_{track_id}")
-            if add_col2.button("➕ Add", key=f"add_{track_id}", use_container_width=True):
-                add_effect_to_track(track_id, selected_eff)
+def render_track_column(track_id, track):
+    # 1. HEADER & REMOVE
+    head_c1, head_c2 = st.columns([3, 1])
+    head_c1.subheader(track["name"])
+    if head_c2.button("✖ Remove", key=f"del_track_{track_id}"):
+        del st.session_state.tracks[track_id]
+        st.rerun()
+
+    # 2. WAVEFORM VISUALIZATION & CUTTER
+    st.write("**Audio Cutter:**")
+    raw_audio = track["raw_audio"]
+    sr = track["sample_rate"]
+    total_duration = (len(raw_audio) if raw_audio.ndim == 1 else len(raw_audio[0])) / sr
+    
+    fig = generate_waveform_plot(raw_audio, sr)
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+    
+    cut_range = st.slider(
+        "Select Range to Extract (Seconds)",
+        min_value=0.0,
+        max_value=float(total_duration),
+        value=(0.0, float(total_duration)),
+        step=0.01,
+        key=f"slider_{track_id}"
+    )
+    
+    if st.button("✂️ Extract Selection to New Track", key=f"extract_{track_id}"):
+        extract_to_new_track(track["name"], raw_audio, sr, cut_range[0], cut_range[1])
+        st.rerun()
+
+    st.audio(create_playback_buffer(raw_audio, sr), format="audio/wav")
+    
+    # 3. EFFECT ADDER
+    st.write("---")
+    add_col1, add_col2 = st.columns([2, 1])
+    selected_eff = add_col1.selectbox("Choose Effect", options=FEATURES.keys(), key=f"sel_{track_id}")
+    if add_col2.button("➕ Add", key=f"add_{track_id}", use_container_width=True):
+        add_effect_to_track(track_id, selected_eff)
+        st.rerun()
+        
+    # 4. AUDIO PROCESSING ENGINE
+    current_audio_array = raw_audio
+    
+    for e_idx, effect in enumerate(track["chain"]):
+        st.write("") # Spacer
+        with st.container(border=True):
+            c_title, c_up, c_down, c_del = st.columns([4, 1, 1, 1])
+            c_title.markdown(f"**#{e_idx + 1} {effect['name']}**")
+            if c_up.button("↑", key=f"up_{effect['id']}"):
+                move_effect(track_id, e_idx, -1)
                 st.rerun()
+            if c_down.button("↓", key=f"down_{effect['id']}"):
+                move_effect(track_id, e_idx, 1)
+                st.rerun()
+            if c_del.button("✖", key=f"del_{effect['id']}"):
+                st.session_state.tracks[track_id]["chain"].pop(e_idx)
+                st.rerun()
+                
+            feature_data = FEATURES[effect['name']]
+            for p_name, p_val in effect["values"].items():
+                min_val = float(feature_data.get(f"{p_name}_min", 0.0))
+                max_val = float(feature_data.get(f"{p_name}_max", 1.0))
+                new_val = st.slider(
+                    label=p_name.replace("_", " ").title(),
+                    min_value=min_val, max_value=max_val, value=float(p_val),
+                    key=f"sl_{effect['id']}_{p_name}",
+                    help=feature_data.get(p_name, "")
+                )
+                effect["values"][p_name] = new_val
             
-            # -----------------------------------------------------------------
-            # THE AUDIO PROCESSING ENGINE & STEP-BY-STEP UI
-            # -----------------------------------------------------------------
-            current_audio_array = track["raw_audio"]
-            sr = track["sample_rate"]
-            
-            for e_idx, effect in enumerate(track["chain"]):
-                st.write("") # Spacer
-                with st.container(border=True):
-                    
-                    # Effect Header & Controls
-                    c_title, c_up, c_down, c_del = st.columns([4, 1, 1, 1])
-                    c_title.markdown(f"**#{e_idx + 1} {effect['name']}**")
-                    if c_up.button("↑", key=f"up_{effect['id']}"):
-                        move_effect(track_id, e_idx, -1)
-                        st.rerun()
-                    if c_down.button("↓", key=f"down_{effect['id']}"):
-                        move_effect(track_id, e_idx, 1)
-                        st.rerun()
-                    if c_del.button("✖", key=f"del_{effect['id']}"):
-                        st.session_state.tracks[track_id]["chain"].pop(e_idx)
-                        st.rerun()
-                        
-                    # Effect Sliders
-                    feature_data = FEATURES[effect['name']]
-                    for p_name, p_val in effect["values"].items():
-                        min_val = float(feature_data.get(f"{p_name}_min", 0.0))
-                        max_val = float(feature_data.get(f"{p_name}_max", 1.0))
-                        
-                        new_val = st.slider(
-                            label=p_name.replace("_", " ").title(),
-                            min_value=min_val,
-                            max_value=max_val,
-                            value=float(p_val),
-                            key=f"sl_{effect['id']}_{p_name}",
-                            help=feature_data.get(p_name, "")
-                        )
-                        effect["values"][p_name] = new_val
-                    
-                    # --- LOSSLESS IN-MEMORY PROCESSING ---
-                    try:
-                        # 1. Fetch the exact effect class from Pedalboard
-                        effect_class = getattr(pedalboard, effect['name'])
-                        
-                        # 2. Instantiate it with our UI values
-                        pb_effect = effect_class(**effect["values"])
-                        board = pedalboard.Pedalboard([pb_effect])
-                        
-                        # 3. Process the audio array from the *previous* step
-                        current_audio_array = board(current_audio_array, sr)
-                        
-                        # 4. Create a temporary buffer so the user can hear this exact step
-                        st.caption(f"🔊 Listen after {effect['name']}:")
-                        st.audio(create_playback_buffer(current_audio_array, sr), format="audio/wav")
-                        
-                    except Exception as e:
-                        st.error(f"Error processing {effect['name']}: {e}")
-            
-            # JSON DICTIONARY DUMP
-            st.write("---")
-            st.subheader("Effect Dictionary")
-            final_output = []
-            for i, item in enumerate(track["chain"]):
-                final_output.append({
-                    "order": i + 1,
-                    "effect": item["name"],
-                    "type": f"pedalboard_native.{item['name']}",
-                    "params": item["values"]
-                })
-            st.json(final_output)
+            try:
+                effect_class = getattr(pedalboard, effect['name'])
+                pb_effect = effect_class(**effect["values"])
+                board = pedalboard.Pedalboard([pb_effect])
+                current_audio_array = board(current_audio_array, sr)
+                
+                st.caption(f"🔊 Listen after {effect['name']}:")
+                st.audio(create_playback_buffer(current_audio_array, sr), format="audio/wav")
+            except Exception as e:
+                st.error(f"Error processing {effect['name']}: {e}")
+
+    # 5. EXPORT/DOWNLOAD BUTTON
+    st.write("---")
+    safe_name = "".join([c if c.isalnum() else "_" for c in track['name']])
+    export_buffer = create_playback_buffer(current_audio_array, sr)
+    st.download_button(
+        label="💾 Download Processed Track",
+        data=export_buffer,
+        file_name=f"Processed_{safe_name}.wav",
+        mime="audio/wav",
+        key=f"dl_{track_id}",
+        use_container_width=True
+    )
+
+def main():
+    st.set_page_config(layout="wide", page_title="Multi-Track Audio Lab")
+    
+    # Initialize State
+    if "tracks" not in st.session_state:
+        st.session_state.tracks = {}
+        
+    render_top_controls()
+    st.divider()
+    
+    if not st.session_state.tracks:
+        st.info("No audio tracks loaded. Upload a .wav file or load a preset!")
+    else:
+        cols = st.columns(len(st.session_state.tracks))
+        for col, (track_id, track) in zip(cols, st.session_state.tracks.items()):
+            with col:
+                render_track_column(track_id, track)
+
+if __name__ == "__main__":
+    main()
